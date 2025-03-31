@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactieve Kaart van Belgische Steengroeven</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f7fafc;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .heading {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .heading h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        #belgium-map {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        .legend {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000; /* Z-index for the legend */
+            border: 1px solid #e0e0e0;
+        }
+        .legend h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 1px solid #d0d0d0;
+        }
+        .legend-text {
+            font-size: 14px;
+            color: #555;
+        }
+        .info-box {
+            background-color: #e0f7fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #b2ebf2;
+        }
+        .info-box h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #00897b;
+            margin-bottom: 8px;
+        }
+        .info-box p {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container">
+        <header class="heading">
+            <h1>Interactieve Kaart van Belgische Steengroeven</h1>
+            <p class="text-gray-600 text-lg">Locaties van belangrijke steengroeven en gedolven steensoorten</p>
+        </header>
+        <main>
+            <div id="belgium-map"></div>
+            <div class="legend">
+                <h3>Legende</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #e74c3c;"></div>
+                    <div class="legend-text">Steengroeve</div>
+                </div>
+            </div>
+            <section class="info-box">
+                <h3>Belangrijkste Steengroeven en Ontgonnen Steensoorten</h3>
+                <p>
+                    Deze interactieve kaart toont de locaties van enkele belangrijke steengroeven in België.  Klik op een marker om details over de steengroeve te zien.
+                </p>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        var map = L.map('belgium-map').setView([50.5, 4.5], 7); // Centered on Belgium, zoom level 7
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Steengroeve data met locaties en namen.  Coördinaten zijn bij benadering.
+        var steengroeven = [
+            { name: "Carrières Marbres et Pierres d'Yvoir", alt_names: ["Kalksteen van Yvoir", "Marmer", "Grès d'Yvoir", "Grès jaune", "Pierre bleue d'Yvoir (Petit granit du Bocq)"], location: [50.316, 4.833], material: "Kalksteen, Marmer", details: "Ontginning van marmer en kalksteen." }, // Yvoir
+            { name: "Ardennes Coticule", alt_names: ["Lierneux", "Belgische Ardennen", "Coticule"], location: [50.483, 5.950], material: "Natuurlijke slijpsteen (Coticule)", details: "Bekend om de productie van slijpstenen." }, // Vielsalm
+            { name: "Schiste de Martelange", alt_names: ["Leisteen van Martelange"], location: [49.766, 5.616], material: "Leisteen", composition: "Maaskalksteen van Longpré (Calciet >99%)", details: "Ontginning van leisteen voor dakbedekking." }, // Martelange
+            { name: "Carrières Moris S.R.L.", alt_names: ["Blauwe Hardsteen"], location: [50.283, 4.900], material: "Blauwe Hardsteen", details: "Niet gespecificeerd." }, // Anhée
+            { name: "Carrière de Ranhissart S.A.", alt_names: ["Kalksteen van Ranhissart", "Schisteuze zandsteen - Steen van Ranhissart"], location: [50.416, 4.550], material: "Kalksteen", details: "Niet gespecificeerd" }, // Andenne
+            { name: "Carrières du Hainaut S.C.A.", alt_names: ["Blauwe Hardsteen van Henegouwen"], location: [50.650, 3.883], material: "Blauwe Hardsteen", composition: "Calciet 96%, sporen van dolomiet, kwarts en pyriet", details: "Bekend om de ontginning van blauwe hardsteen." }, // Soignies
+            { name: "Carrières de la Préalle S.A.", alt_names: ["Kalksteen van Chanxhe"], location: [50.150, 4.450], material: "Blauwe Hardsteen", details: "Niet gespecificeerd" }, // Charleroi
+            { name: "Carrières de Sprimont et de Chanxhe S.A.", alt_names: ["Kalksteen van Sprimont", "Kalksteen van Chanxhe"], location: [50.483, 5.583], material: "Kalksteen", composition: "Blauwe Hardsteen", details: "Ontginning van kalksteen." }, // Sprimont
+            { name: "Pierre Bleue de Wallonie S.A.", alt_names: ["Blauwe Hardsteen van Wallonië"], location: [50.350, 4.866], material: "Blauwe Hardsteen", details: "Gespecialiseerd in de ontginning van blauwe hardsteen." }, // Namur
+            { name: "Carrières de la Pierre Bleue Belge S.A.", alt_names: ["Blauwe Hardsteen"], location: [50.583, 3.916], material: "Blauwe Hardsteen", details: "Ontginning van Belgische blauwe hardsteen." }, // Hainaut
+            { name: "Carrières du Bocq S.A.", alt_names: ["Kalksteen van Bocq", "Bocq blauwe hardsteen", "Belgische blauwe hardsteen"], location: [50.383, 5.100], material: "Kalksteen", details: "Ontginning van kalksteen." }, // Ciney
+            { name: "Calcaire de Vinalmont S.A.", alt_names: ["Kalksteen van Vinalmont", "Maaslandse kalksteen", "Steen van Vinalmont", "Steen van de Maas"], location: [50.566, 5.316], material: "Kalksteen", details: "Ontginning van kalksteen." }, // Wanze
+             { name: "Albotom S.R.L.", alt_names: [], location: [50.033, 4.683], material: "Onbekend", details: "Niet gespecificeerd" }, // Walcourt
+            { name: "CBR S.A. Sagrex Lemay", alt_names: ["Kalksteen van Vaulx", "Pierre de Tournai - zwarte steen van Doornik", "Zwarte Clovis", "Zwarte Childeric"], location: [50.450, 5.483], material: "Kalksteen", details: "Producent van cement en toeslagmaterialen." }, // Liège
+            { name: "Carrière Emond S.A.", alt_names: ["Zandsteen van Fontenoille", "Zanderige kalksteen van Fontenoille", "Sinemurische kalksteen"], location: [50.183, 5.050],  material: "Zandsteen", composition: "Kwarts 32.4%, calciet 65.7%, sporen van dolomiet en ijzermineralen", details: "Niet gespecificeerd" }, // Rochefort
+            { name: "A.G.G. S.A. (Aux Grès de Gaume)", alt_names: ["Zandsteen van Gaume"], location: [49.633, 5.750], material: "Zandsteen", details: "Ontginning van zandsteen." }, // Gaume
+            { name: "Entreprise Bernard Pierrot et Fils S.A.", alt_names: [], location: [49.800, 5.433], material: "Onbekend", details: "Niet gespecificeerd" }, // Florenville
+            { name: "Carrière de la Hazotte S.R.L.", location: [50.433, 5.733], material: "Niet gespecificeerd", details: "Niet gespecificeerd" },
+            { name: "Carrières de Grès d'Arbre S.A.", location: [50.600, 5.666], material: "Zandsteen", details: "Ontginning van zandsteen." },
+            { name: "Carrières de Rhisnes S.A.", location: [50.466, 4.783], material: "Niet gespecificeerd", details: "Niet gespecificeerd" },
+            { name: "Grès du bois d'Anthisnes (GBA) S.R.L", location: [50.483, 5.433], material: "Zandsteen", details: "Ontginning van zandsteen." },
+            { name: "Trageco S.A.", location: [50.083, 4.583], material: "Niet gespecificeerd", details: "Niet gespecificeerd" },
+            { name: "Pierre de Walmes S.A.", location: [50.216, 4.883], material: "Niet gespecificeerd", details: "Niet gespecificeerd" },
+            { name: "Carrière New Wal Pierre S.A.", location: [50.250, 4.933], material: "Niet gespecificeerd", details: "Niet gespecificeerd" },
+            { name: "Carrière de Mouzalve-Cardem S.A.", location: [50.816, 4.383], material: "Niet gespecificeerd", details: "Niet gespecificeerd" },
+            { name: "Ardoisières d'Herbeumont S.A.", location: [49.783, 5.316], material: "Leisteen", details: "Ontginning van leisteen." },
+            { name: "Nelles S.A.", location: [50.966, 5.466], material: "Niet gespecificeerd", details: "Niet gespecificeerd" },
+            { name: "Balegemse Steen", location: [50.900, 3.833], material: "Zandsteen", details: "Winning van Balegemse steen." }
+        ];
+
+        // Add markers to the map
+        steengroeven.forEach(function(steengroeve) {
+            var marker = L.marker(steengroeve.location).addTo(map);
+            var popupContent = `<b>${steengroeve.name}</b><br>Materiaal: ${steengroeve.material}`;
+            if (steengroeve.details) {
+                popupContent += `<br>${steengroeve.details}`;
+            }
+            if (steengroeve.alt_names && steengroeve.alt_names.length > 0) {
+                popupContent += `<br>Alternatieve namen: ${steengroeve.alt_names.join(', ')}`;
+            }
+            if (steengroeve.composition) {
+                popupContent += `<br>Samenstelling: ${steengroeve.composition}`;
+            }
+            marker.bindPopup(popupContent);
+        });
+
+    </script>
+</body>
+</html>
